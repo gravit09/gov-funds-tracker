@@ -1,0 +1,40 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\Users\\upadh\\OneDrive\\Desktop\\gov-funds\\contracts\\SimplifiedSpendingRegistry.sol": {
+      "lastModificationDate": 1742570963133,
+      "contentHash": "8e9b71c58e18739f2003debde684c98f",
+      "sourceName": "contracts/SimplifiedSpendingRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.17",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.17"
+      ],
+      "artifacts": [
+        "SimplifiedSpendingRegistry"
+      ]
+    }
+  }
+}
