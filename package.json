@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -18,10 +18,16 @@
     "@eslint/eslintrc": "^3",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@tailwindcss/postcss": "^4",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
     "eslint": "^9",
     "eslint-config-next": "15.2.3",
     "ethers": "^6.7.0",
     "hardhat": "^2.22.19",
-    "tailwindcss": "^4"
+    "process": "^0.11.10",
+    "stream-browserify": "^3.0.0",
+    "tailwindcss": "^4",
+    "util": "^0.12.5",
+    "webpack": "^5.98.0"
   }
 }
