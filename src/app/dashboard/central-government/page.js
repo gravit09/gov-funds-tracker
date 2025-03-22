@@ -225,7 +225,7 @@ export default function CentralGovernmentDashboard() {
           Amount: ${ethersModule.formatEther(record.amount)} ETH
           Document Hash: ${record.documentHash}
           Timestamp: ${new Date(
-            record.timestamp.toNumber() * 1000
+            Number(record.timestamp) * 1000
           ).toLocaleString()}
         \n`;
       });
@@ -271,7 +271,7 @@ export default function CentralGovernmentDashboard() {
           Reason: ${request.reason}
           Document Hash: ${request.documentHash}
           Timestamp: ${new Date(
-            request.timestamp.toNumber() * 1000
+            Number(request.timestamp) * 1000
           ).toLocaleString()}
           Status: ${
             request.isApproved
