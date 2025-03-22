@@ -1,6 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ethers } from "ethers";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import addresses from "@/config/addresses.json";
 
 export default function CentralGovernmentDashboard() {
   const router = useRouter();
@@ -31,12 +35,41 @@ export default function CentralGovernmentDashboard() {
   const [contractBalanceResult, setContractBalanceResult] = useState("");
   const [allFundRequestsResult, setAllFundRequestsResult] = useState("");
 
-  // New state for active section
   const [activeSection, setActiveSection] = useState("entity");
+
+  // State declarations
+  const [activeTab, setActiveTab] = useState("connection");
+  const [selectedAccount, setSelectedAccount] = useState("");
+  const [accountInfo, setAccountInfo] = useState("");
+  const [issuedFunds, setIssuedFunds] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Contract configuration
+  const contractAddress = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+  const contractABI = [
+    "function registerEntity(address entityAddress, string memory name) public",
+    "function deactivateEntity(address entityAddress) public",
+    "function issueFunds(address entityAddress, uint256 amount) public payable",
+    "function getEntityDetails(address entityAddress) public view returns (string memory name, bool isActive, uint256 balance)",
+    "function getAllEntityAddresses() public view returns (address[] memory)",
+    "function getSpendingRecords(uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, string purpose, uint256 amount, string documentHash, uint256 timestamp)[] memory)",
+    "function getContractBalance() public view returns (uint256)",
+    "function getFundRequests(uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, uint256 amount, string reason, string documentHash, uint256 timestamp, bool isApproved, bool isRejected)[] memory)",
+    "function approveFundRequest(uint256 requestId) public",
+    "function rejectFundRequest(uint256 requestId) public",
+    "function centralGovernment() public view returns (address)",
+  ];
+
+  // Get central government account from addresses.json
+  const centralGovAccount = Object.entries(addresses.accounts).find(
+    ([_, account]) => account.name === "Account #0"
+  );
+
+  // State for contract connection
+  const [signer, setSigner] = useState(null);
 
   useEffect(() => {
     setIsClient(true);
-    // Dynamically import ethers only on the client side
     const importEthers = async () => {
       try {
         const ethers = await import("ethers");
@@ -54,55 +87,48 @@ export default function CentralGovernmentDashboard() {
 
     try {
       setLoading(true);
+      setError("");
 
       // Connect to local Hardhat network
-      const provider = new ethersModule.JsonRpcProvider(
-        "http://127.0.0.1:8545"
-      );
+      const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
 
-      // Use the first account (deployer) as Central Government
-      const privateKey =
-        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-      const wallet = new ethersModule.Wallet(privateKey, provider);
+      // Test network connection
+      try {
+        await provider.getNetwork();
+      } catch (error) {
+        throw new Error(
+          "Failed to connect to the Hardhat network. Please ensure it's running."
+        );
+      }
 
-      // Get the deployed contract address from the deployment transaction
-      const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+      // Get the private key for the selected account
+      const [address, account] = centralGovAccount;
+      if (!account) {
+        throw new Error("Central government account not found");
+      }
 
-      // Import contract ABI
-      const contractABI = [
-        "function registerEntity(address entityAddress, string memory name) public",
-        "function deactivateEntity(address entityAddress) public",
-        "function issueFunds(address entityAddress, uint256 amount) public payable",
-        "function getEntityDetails(address entityAddress) public view returns (string memory name, bool isActive, uint256 balance)",
-        "function getAllEntityAddresses() public view returns (address[] memory)",
-        "function getSpendingRecords(uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, string purpose, uint256 amount, string documentHash, uint256 timestamp)[] memory)",
-        "function getContractBalance() public view returns (uint256)",
-        "function getFundRequests(uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, uint256 amount, string reason, string documentHash, uint256 timestamp, bool isApproved, bool isRejected)[] memory)",
-        "function approveFundRequest(uint256 requestId) public",
-        "function rejectFundRequest(uint256 requestId) public",
-        "function centralGovernment() public view returns (address)",
-      ];
-
-      const contract = new ethersModule.Contract(
+      const newSigner = new ethers.Wallet(account.privateKey, provider);
+      const newContract = new ethers.Contract(
         contractAddress,
         contractABI,
-        wallet
+        newSigner
       );
 
-      // Verify connection by getting contract balance
-      const balance = await contract.getContractBalance();
-      console.log(
-        "Contract balance:",
-        ethersModule.formatEther(balance),
-        "ETH"
-      );
+      // Test contract connection
+      try {
+        await newContract.getEntityDetails(contractAddress);
+      } catch (error) {
+        throw new Error(
+          "Failed to connect to the contract. Please check if the contract is deployed."
+        );
+      }
 
-      setContract(contract);
-      setConnectionStatus("Connected as Central Government");
-      setError(null);
+      setSigner(newSigner);
+      setContract(newContract);
+      setConnectionStatus(`Connected as ${account.name}`);
     } catch (error) {
       console.error("Connection error:", error);
-      setConnectionStatus("Connection failed: " + error.message);
+      setConnectionStatus(`Connection failed: ${error.message}`);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -190,18 +216,58 @@ export default function CentralGovernmentDashboard() {
   };
 
   const getAllEntities = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError("Please connect your account first");
+      return;
+    }
 
     try {
       setLoading(true);
-      const addresses = await contract.getAllEntityAddresses();
-      let result = "Registered Entities:\n";
-      addresses.forEach((address, index) => {
-        result += `${index + 1}. ${address}\n`;
-      });
+      setError("");
+
+      // Test contract connection
+      try {
+        await contract.getEntityDetails(contractAddress);
+      } catch (error) {
+        throw new Error(
+          "Failed to connect to the contract. Please check if the contract is deployed."
+        );
+      }
+
+      // Get all entity addresses
+      const entityAddresses = await contract.getAllEntityAddresses();
+      console.log("Retrieved entity addresses:", entityAddresses);
+
+      if (!entityAddresses || entityAddresses.length === 0) {
+        setAllEntitiesResult("No entities found.");
+        return;
+      }
+
+      // Get details for each entity
+      let result = "Registered Entities:\n\n";
+      for (const address of entityAddresses) {
+        try {
+          const [name, isActive, balance] = await contract.getEntityDetails(
+            address
+          );
+          result += `Name: ${name}\n`;
+          result += `Address: ${address}\n`;
+          result += `Status: ${isActive ? "Active" : "Not Active"}\n`;
+          result += `Balance: ${ethersModule.formatEther(balance)} ETH\n`;
+          result += "-------------------\n\n";
+        } catch (error) {
+          console.error(`Error getting details for entity ${address}:`, error);
+          result += `Address: ${address}\n`;
+          result += `Error: Failed to load details\n`;
+          result += "-------------------\n\n";
+        }
+      }
+
       setAllEntitiesResult(result);
     } catch (error) {
-      setAllEntitiesResult("Error: " + error.message);
+      console.error("Get all entities error:", error);
+      setError(error.message);
+      setAllEntitiesResult("");
     } finally {
       setLoading(false);
     }
@@ -212,6 +278,7 @@ export default function CentralGovernmentDashboard() {
 
     try {
       setLoading(true);
+      const [name] = await contract.getEntityDetails(queryAddress);
       const records = await contract.getSpendingRecords(
         parseInt(spendingOffset),
         parseInt(spendingLimit)
@@ -220,12 +287,13 @@ export default function CentralGovernmentDashboard() {
       records.forEach((record) => {
         result += `
           ID: ${record.id.toString()}
+          Name: ${name}
           Entity: ${record.entity}
           Purpose: ${record.purpose}
           Amount: ${ethersModule.formatEther(record.amount)} ETH
           Document Hash: ${record.documentHash}
           Timestamp: ${new Date(
-            record.timestamp.toNumber() * 1000
+            Number(record.timestamp) * 1000
           ).toLocaleString()}
         \n`;
       });
@@ -271,7 +339,7 @@ export default function CentralGovernmentDashboard() {
           Reason: ${request.reason}
           Document Hash: ${request.documentHash}
           Timestamp: ${new Date(
-            request.timestamp.toNumber() * 1000
+            Number(request.timestamp) * 1000
           ).toLocaleString()}
           Status: ${
             request.isApproved
@@ -369,6 +437,18 @@ export default function CentralGovernmentDashboard() {
               >
                 {connectionStatus}
               </div>
+              <select
+                value={selectedAccount}
+                onChange={(e) => setSelectedAccount(e.target.value)}
+                className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
+              >
+                <option value="">Select an account...</option>
+                {centralGovAccount && (
+                  <option value={centralGovAccount[0]}>
+                    Central Government
+                  </option>
+                )}
+              </select>
               <button
                 onClick={connectToContract}
                 disabled={loading}
