@@ -12,7 +12,9 @@ export default function EntityDashboard() {
   const [fundRequests, setFundRequests] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
+  const [ethersModule, setEthersModule] = useState(null);
+  
+    
   // Contract configuration
   const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
   const contractABI = [
@@ -29,7 +31,9 @@ export default function EntityDashboard() {
     "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC": "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", // Dept of Women Welfare
   };
 
-  let provider, signer, contract;
+  // State for contract connection
+  const [contract, setContract] = useState(null);
+  const [signer, setSigner] = useState(null);
 
   // Connect to the contract
   const connectToContract = async () => {
@@ -42,10 +46,7 @@ export default function EntityDashboard() {
       setError('');
 
       // Connect to local Hardhat network
-      provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
-
-      // Disable ENS resolution
-      provider.ensAddress = null;
+      const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
 
       // Get the private key for the selected entity
       const privateKey = entityPrivateKeys[selectedEntity];
@@ -53,9 +54,11 @@ export default function EntityDashboard() {
         throw new Error("Private key not found for selected entity");
       }
 
-      signer = new ethers.Wallet(privateKey, provider);
-      contract = new ethers.Contract(contractAddress, contractABI, signer);
-
+      const newSigner = new ethers.Wallet(privateKey, provider);
+      const newContract = new ethers.Contract(contractAddress, contractABI, newSigner);
+      
+      setSigner(newSigner);
+      setContract(newContract);
       setConnectionStatus(`Connected as ${selectedEntity}`);
     } catch (error) {
       console.error("Connection error:", error);
@@ -68,7 +71,7 @@ export default function EntityDashboard() {
 
   // Format timestamp
   const formatTimestamp = (timestamp) => {
-    return new Date(timestamp.toNumber() * 1000).toLocaleString();
+    return new Date(timestamp * 1000).toLocaleString();
   };
 
   // Get Entity Information
@@ -77,15 +80,15 @@ export default function EntityDashboard() {
       setIsLoading(true);
       setError('');
 
-      const queryProvider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
-      queryProvider.ensAddress = null;
+      // FIXED: removed ENS configuration
+      const queryProvider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
       const queryContract = new ethers.Contract(contractAddress, contractABI, queryProvider);
 
       const [name, isActive, balance] = await queryContract.getEntityDetails(selectedEntity);
       setEntityInfo(`
         Name: ${name}<br>
         Active: ${isActive}<br>
-        Balance: ${ethers.utils.formatEther(balance)} ETH
+        Balance: ${ethers.formatEther(balance)} ETH
       `);
     } catch (error) {
       setError(error.message);
@@ -103,7 +106,7 @@ export default function EntityDashboard() {
       setError('');
 
       const purpose = e.target.purpose.value;
-      const amount = ethers.utils.parseEther(e.target.amount.value);
+      const amount = ethers.parseEther(e.target.amount.value);
       const documentHash = e.target.documentHash.value;
 
       const tx = await contract.recordSpending(purpose, amount, documentHash);
@@ -132,7 +135,7 @@ export default function EntityDashboard() {
         html += `
           ID: ${record.id.toString()}<br>
           Purpose: ${record.purpose}<br>
-          Amount: ${ethers.utils.formatEther(record.amount)} ETH<br>
+          Amount: ${ethers.formatEther(record.amount)} ETH<br>
           Document Hash: ${record.documentHash}<br>
           Timestamp: ${formatTimestamp(record.timestamp)}<br><br>
         `;
@@ -153,7 +156,7 @@ export default function EntityDashboard() {
       setIsLoading(true);
       setError('');
 
-      const amount = ethers.utils.parseEther(e.target.amount.value);
+      const amount = ethers.parseEther(e.target.amount.value);
       const reason = e.target.reason.value;
       const documentHash = e.target.documentHash.value;
 
@@ -182,7 +185,7 @@ export default function EntityDashboard() {
       requests.forEach((request) => {
         html += `
           ID: ${request.id.toString()}<br>
-          Amount: ${ethers.utils.formatEther(request.amount)} ETH<br>
+          Amount: ${ethers.formatEther(request.amount)} ETH<br>
           Reason: ${request.reason}<br>
           Document Hash: ${request.documentHash}<br>
           Timestamp: ${formatTimestamp(request.timestamp)}<br>
@@ -216,8 +219,8 @@ export default function EntityDashboard() {
                   className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
                 >
                   <option value="">Select an entity...</option>
-                  <option value="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266">Department of Education</option>
-                  <option value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8">Department of Women Welfare</option>
+                  <option value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8">Department of Education</option>
+                  <option value="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC">Department of Women Welfare</option>
                 </select>
               </div>
               <div className={`text-${connectionStatus.includes('Connected') ? 'green' : 'gray'}-300 flex items-center`}>
@@ -431,4 +434,4 @@ export default function EntityDashboard() {
       )}
     </div>
   );
-} 
+}
