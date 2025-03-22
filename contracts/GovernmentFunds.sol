@@ -84,11 +84,8 @@ contract GovernmentFunds {
         require(entities[msg.sender].isActive, "Entity is not active");
         require(amount > 0, "Amount must be greater than 0");
         require(deadline > block.timestamp, "Deadline must be in the future");
-        require(bytes(title).length >= 3, "Title must be at least 3 characters");
-        require(bytes(description).length >= 10, "Description must be at least 10 characters");
         require(minBidAmount > 0, "Minimum bid amount must be greater than 0");
         require(maxBidAmount > minBidAmount, "Maximum bid amount must be greater than minimum bid amount");
-        require(maxBidAmount <= amount, "Maximum bid amount cannot exceed tender amount");
 
         // Check if entity has sufficient balance
         require(entities[msg.sender].balance >= amount, "Insufficient balance to issue tender");

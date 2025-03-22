@@ -1,5 +1,5 @@
 // Contract configuration
-const contractAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+const contractAddress = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
 const contractABI = [
   "function getEntityDetails(address entityAddress) public view returns (string memory name, bool isActive, uint256 balance)",
   "function getAllEntityAddresses() public view returns (address[] memory)",
@@ -84,45 +84,4 @@ const getAllEntities = async () => {
               </div>
             </div>
           </div>
-        `;
-      }
-    }
-
-    setEntityList(html);
-  } catch (error) {
-    console.error("Get all entities error:", error);
-    setError(error.message);
-    setEntityList("");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-// ... existing code ...
-
-// In the renderSectionContent function, update the "overview" case:
-case "overview":
-  return (
-    <div className="bg-gray-800/30 backdrop-blur-md rounded-xl p-8 border border-gray-700/50 shadow-[0_0_15px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all duration-300">
-      <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
-        Entity Overview
-      </h2>
-      <div className="space-y-6">
-        <div>
-          <button
-            onClick={getAllEntities}
-            disabled={isLoading}
-            className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20"
-          >
-            Get All Entities
-          </button>
-          <div
-            className="mt-4"
-            dangerouslySetInnerHTML={{ __html: entityList }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-// ... existing code ... 
+        `

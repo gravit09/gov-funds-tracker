@@ -19,15 +19,15 @@ export default function EntityDashboard() {
   const [ethersModule, setEthersModule] = useState(null);
 
   // Contract configuration
-  const contractAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+  const contractAddress = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
   const contractABI = [
     "function recordSpending(string memory title, uint256 amount, string memory ipfsUri) public",
     "function getEntityDetails(address entityAddress) public view returns (string memory name, bool isActive, uint256 balance)",
     "function getSpendingRecords(address entityAddress) public view returns (tuple(uint256 id, address entity, uint256 amount, uint256 timestamp)[] memory)",
     "function getEntitySpendingRecords(address entityAddress, uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, string purpose, uint256 amount, string documentHash, uint256 timestamp)[] memory)",
     "function issueTender(string memory title, string memory description, uint256 amount, uint256 deadline, uint256 minBidAmount, uint256 maxBidAmount) public",
-    "function placeBid(uint256 tenderId, uint256 amount) public",
-    "function withdrawBid(uint256 tenderId, uint256 bidId) public",
+    "function placeBid(uint256 tenderId, uint256 amount) public payable",
+    "function withdrawBid(uint256 tenderId) public",
     "function awardTender(uint256 tenderId) public",
     "function cancelTender(uint256 tenderId) public",
     "function getTenders(uint256 offset, uint256 limit) public view returns (tuple(uint256 id, string title, string description, uint256 amount, uint256 deadline, address issuer, bool isActive, address winner, uint256 winningBid, uint256 minBidAmount, uint256 maxBidAmount, uint256 bidCount)[] memory)",
@@ -534,7 +534,7 @@ export default function EntityDashboard() {
     }
   };
 
-  // Issue new tender
+  // Issue Tender
   const issueTender = async () => {
     try {
       if (!contract) {
@@ -544,7 +544,10 @@ export default function EntityDashboard() {
         throw new Error("Please select an entity account first");
       }
 
-      // Validate required fields
+      setIsLoading(true);
+      setError("");
+
+      // Basic input validation
       if (
         !tenderTitle ||
         !tenderDescription ||
@@ -553,136 +556,57 @@ export default function EntityDashboard() {
         !minBidAmount ||
         !maxBidAmount
       ) {
-        throw new Error("Please fill in all tender details");
+        throw new Error("All fields are required");
       }
 
-      // Validate title and description length
-      if (tenderTitle.length < 3) {
-        throw new Error("Title must be at least 3 characters long");
-      }
-      if (tenderDescription.length < 10) {
-        throw new Error("Description must be at least 10 characters long");
-      }
+      // Convert amounts to Wei
+      const amount = ethers.parseEther(tenderAmount);
+      const minBid = ethers.parseEther(minBidAmount);
+      const maxBid = ethers.parseEther(maxBidAmount);
 
-      // Validate and convert amounts
-      const amount = parseFloat(tenderAmount);
-      const minBid = parseFloat(minBidAmount);
-      const maxBid = parseFloat(maxBidAmount);
+      // Convert deadline to timestamp
+      const deadline = Math.floor(new Date(tenderDeadline).getTime() / 1000);
 
-      if (isNaN(amount) || amount <= 0) {
-        throw new Error(
-          "Invalid tender amount. Please enter a positive number."
-        );
-      }
-      if (isNaN(minBid) || minBid <= 0) {
-        throw new Error(
-          "Invalid minimum bid amount. Please enter a positive number."
-        );
-      }
-      if (isNaN(maxBid) || maxBid <= 0) {
-        throw new Error(
-          "Invalid maximum bid amount. Please enter a positive number."
-        );
-      }
-      if (maxBid <= minBid) {
-        throw new Error(
-          "Maximum bid amount must be greater than minimum bid amount"
-        );
-      }
-      if (maxBid > amount) {
-        throw new Error("Maximum bid amount cannot exceed tender amount");
-      }
-
-      // Convert deadline to timestamp and validate
-      const deadlineTimestamp = Math.floor(
-        new Date(tenderDeadline).getTime() / 1000
-      );
-      const currentTimestamp = Math.floor(Date.now() / 1000);
-      if (deadlineTimestamp <= currentTimestamp) {
-        throw new Error("Deadline must be in the future");
-      }
-
-      setIsLoading(true);
-      setError("");
-      setTenderResult("Processing tender creation...");
-
-      // Check if entity is active and has sufficient balance
+      // Check if entity is active
       const [name, isActive, balance] = await contract.getEntityDetails(
         selectedEntity
       );
-      console.log("Entity Details:", {
-        name,
-        isActive,
-        balance: balance.toString(),
-      });
-
       if (!isActive) {
         throw new Error(
           `Entity "${name}" is not currently active in the system.`
         );
       }
 
-      // Convert amounts to Wei
-      const amountInWei = ethers.parseEther(amount.toString());
-      const minBidInWei = ethers.parseEther(minBid.toString());
-      const maxBidInWei = ethers.parseEther(maxBid.toString());
-
-      if (amountInWei > balance) {
+      // Check if entity has sufficient balance
+      if (balance < amount) {
         throw new Error(
-          `Insufficient balance. Available: ${ethers.formatEther(balance)} ETH`
+          `Insufficient balance. Required: ${ethers.formatEther(
+            amount
+          )} ETH, Available: ${ethers.formatEther(balance)} ETH`
         );
       }
 
-      // Log the parameters being sent to the contract
-      console.log("Tender Parameters:", {
-        title: tenderTitle,
-        description: tenderDescription,
-        amount: amountInWei.toString(),
-        deadline: deadlineTimestamp,
-        minBidAmount: minBidInWei.toString(),
-        maxBidAmount: maxBidInWei.toString(),
-        currentTimestamp,
-        entityAddress: selectedEntity,
-      });
-
-      // Issue the tender
+      // Issue tender
       const tx = await contract.issueTender(
         tenderTitle,
         tenderDescription,
-        amountInWei,
-        deadlineTimestamp,
-        minBidInWei,
-        maxBidInWei
+        amount,
+        deadline,
+        minBid,
+        maxBid
       );
       await tx.wait();
 
-      // Clear form and show success message
+      setTenderResult("Tender issued successfully!");
       setTenderTitle("");
       setTenderDescription("");
       setTenderAmount("");
       setTenderDeadline("");
       setMinBidAmount("");
       setMaxBidAmount("");
-      setTenderResult("Tender issued successfully!");
     } catch (error) {
-      console.error("Tender creation error:", error);
-      if (error.message.includes("not active")) {
-        setTenderResult(`Error: ${error.message}`);
-      } else if (error.message.includes("Deadline must be in the future")) {
-        setTenderResult("Error: Please select a future date for the deadline");
-      } else if (error.message.includes("Amount must be greater than 0")) {
-        setTenderResult("Error: Amount must be greater than 0");
-      } else if (error.message.includes("Insufficient balance")) {
-        setTenderResult(`Error: ${error.message}`);
-      } else if (error.message.includes("Title must be at least")) {
-        setTenderResult("Error: Title must be at least 3 characters long");
-      } else if (error.message.includes("Description must be at least")) {
-        setTenderResult(
-          "Error: Description must be at least 10 characters long"
-        );
-      } else {
-        setTenderResult("Error: " + error.message);
-      }
+      console.error("Issue tender error:", error);
+      setTenderResult(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
