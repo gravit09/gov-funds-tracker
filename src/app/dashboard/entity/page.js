@@ -1,8 +1,9 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
 export default function EntityDashboard() {
+  // State declarations
   const [activeTab, setActiveTab] = useState('connection');
   const [connectionStatus, setConnectionStatus] = useState('Not Connected');
   const [selectedEntity, setSelectedEntity] = useState('');
@@ -42,6 +43,8 @@ export default function EntityDashboard() {
 
       // Connect to local Hardhat network
       provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
+
+      // Disable ENS resolution
       provider.ensAddress = null;
 
       // Get the private key for the selected entity
