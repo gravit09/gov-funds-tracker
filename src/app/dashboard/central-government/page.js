@@ -1,6 +1,6 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+"use client";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from 'next/dynamic';
 
 // Dynamically import ethers to avoid SSR issues
@@ -10,36 +10,36 @@ export default function CentralGovernmentDashboard() {
   const router = useRouter();
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('Not Connected');
+  const [connectionStatus, setConnectionStatus] = useState("Not Connected");
   const [error, setError] = useState(null);
   const [isClient, setIsClient] = useState(false);
 
   // Form states
-  const [entityAddress, setEntityAddress] = useState('');
-  const [entityName, setEntityName] = useState('');
-  const [entityType, setEntityType] = useState('');
-  const [entityDescription, setEntityDescription] = useState('');
-  const [entityContact, setEntityContact] = useState('');
-  const [entityBudget, setEntityBudget] = useState('');
-  const [deactivateAddress, setDeactivateAddress] = useState('');
-  const [fundAddress, setFundAddress] = useState('');
-  const [fundAmount, setFundAmount] = useState('');
-  const [queryAddress, setQueryAddress] = useState('');
-  const [spendingOffset, setSpendingOffset] = useState('0');
-  const [spendingLimit, setSpendingLimit] = useState('5');
-  const [requestId, setRequestId] = useState('');
-  const [fundRequestOffset, setFundRequestOffset] = useState('0');
-  const [fundRequestLimit, setFundRequestLimit] = useState('5');
+  const [entityAddress, setEntityAddress] = useState("");
+  const [entityName, setEntityName] = useState("");
+  const [entityType, setEntityType] = useState("");
+  const [entityDescription, setEntityDescription] = useState("");
+  const [entityContact, setEntityContact] = useState("");
+  const [entityBudget, setEntityBudget] = useState("");
+  const [deactivateAddress, setDeactivateAddress] = useState("");
+  const [fundAddress, setFundAddress] = useState("");
+  const [fundAmount, setFundAmount] = useState("");
+  const [queryAddress, setQueryAddress] = useState("");
+  const [spendingOffset, setSpendingOffset] = useState("0");
+  const [spendingLimit, setSpendingLimit] = useState("5");
+  const [requestId, setRequestId] = useState("");
+  const [fundRequestOffset, setFundRequestOffset] = useState("0");
+  const [fundRequestLimit, setFundRequestLimit] = useState("5");
 
   // Result states
-  const [entityDetailsResult, setEntityDetailsResult] = useState('');
-  const [allEntitiesResult, setAllEntitiesResult] = useState('');
-  const [spendingRecordsResult, setSpendingRecordsResult] = useState('');
-  const [contractBalanceResult, setContractBalanceResult] = useState('');
-  const [allFundRequestsResult, setAllFundRequestsResult] = useState('');
+  const [entityDetailsResult, setEntityDetailsResult] = useState("");
+  const [allEntitiesResult, setAllEntitiesResult] = useState("");
+  const [spendingRecordsResult, setSpendingRecordsResult] = useState("");
+  const [contractBalanceResult, setContractBalanceResult] = useState("");
+  const [allFundRequestsResult, setAllFundRequestsResult] = useState("");
 
   // New state for active section
-  const [activeSection, setActiveSection] = useState('entity');
+  const [activeSection, setActiveSection] = useState("entity");
 
   useEffect(() => {
     setIsClient(true);
@@ -50,6 +50,7 @@ export default function CentralGovernmentDashboard() {
     
     try {
       setLoading(true);
+      setError(null);
       
       // Connect to local Hardhat network with explicit network configuration
       const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545", {
@@ -75,7 +76,6 @@ export default function CentralGovernmentDashboard() {
 
       setContract(contract);
       setConnectionStatus('Connected as Central Government');
-      setError(null);
     } catch (error) {
       console.error("Connection error:", error);
       setConnectionStatus('Connection failed: ' + error.message);
@@ -86,11 +86,16 @@ export default function CentralGovernmentDashboard() {
   };
 
   const registerEntity = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
-      if (!ethers.isAddress(entityAddress)) {
+      setError(null);
+      
+      if (!ethers.utils.isAddress(entityAddress)) {
         throw new Error('Invalid Ethereum address format');
       }
 
@@ -107,6 +112,7 @@ export default function CentralGovernmentDashboard() {
       setEntityBudget('');
     } catch (error) {
       console.error("Registration error:", error);
+      setError(error.message);
       setEntityDetailsResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -114,15 +120,25 @@ export default function CentralGovernmentDashboard() {
   };
 
   const deactivateEntity = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
+      
+      if (!ethers.utils.isAddress(deactivateAddress)) {
+        throw new Error('Invalid Ethereum address format');
+      }
+
       const tx = await contract.deactivateEntity(deactivateAddress);
       await tx.wait();
       setEntityDetailsResult('Entity deactivated successfully!');
       setDeactivateAddress('');
     } catch (error) {
+      setError(error.message);
       setEntityDetailsResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -130,17 +146,27 @@ export default function CentralGovernmentDashboard() {
   };
 
   const issueFunds = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
-      const amount = ethers.parseEther(fundAmount);
+      setError(null);
+      
+      if (!ethers.utils.isAddress(fundAddress)) {
+        throw new Error('Invalid Ethereum address format');
+      }
+
+      const amount = ethers.utils.parseEther(fundAmount);
       const tx = await contract.issueFunds(fundAddress, { value: amount });
       await tx.wait();
       setEntityDetailsResult('Funds issued successfully!');
       setFundAddress('');
       setFundAmount('');
     } catch (error) {
+      setError(error.message);
       setEntityDetailsResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -148,17 +174,27 @@ export default function CentralGovernmentDashboard() {
   };
 
   const getEntityDetails = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
+      
+      if (!ethers.utils.isAddress(queryAddress)) {
+        throw new Error('Invalid Ethereum address format');
+      }
+
       const [name, isActive, balance] = await contract.getEntityDetails(queryAddress);
       setEntityDetailsResult(`
         Name: ${name}
         Active: ${isActive}
-        Balance: ${ethers.formatEther(balance)} ETH
+        Balance: ${ethers.utils.formatEther(balance)} ETH
       `);
     } catch (error) {
+      setError(error.message);
       setEntityDetailsResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -166,10 +202,15 @@ export default function CentralGovernmentDashboard() {
   };
 
   const getAllEntities = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
+      
       const addresses = await contract.getAllEntityAddresses();
       let result = 'Registered Entities:\n';
       addresses.forEach((address, index) => {
@@ -177,6 +218,7 @@ export default function CentralGovernmentDashboard() {
       });
       setAllEntitiesResult(result);
     } catch (error) {
+      setError(error.message);
       setAllEntitiesResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -184,10 +226,15 @@ export default function CentralGovernmentDashboard() {
   };
 
   const getSpendingRecords = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
+      
       const records = await contract.getSpendingRecords(
         parseInt(spendingOffset),
         parseInt(spendingLimit)
@@ -198,13 +245,14 @@ export default function CentralGovernmentDashboard() {
           ID: ${record.id.toString()}
           Entity: ${record.entity}
           Purpose: ${record.purpose}
-          Amount: ${ethers.formatEther(record.amount)} ETH
+          Amount: ${ethers.utils.formatEther(record.amount)} ETH
           Document Hash: ${record.documentHash}
           Timestamp: ${new Date(record.timestamp.toNumber() * 1000).toLocaleString()}
         \n`;
       });
       setSpendingRecordsResult(result);
     } catch (error) {
+      setError(error.message);
       setSpendingRecordsResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -212,13 +260,19 @@ export default function CentralGovernmentDashboard() {
   };
 
   const getContractBalance = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
+      
       const balance = await contract.getContractBalance();
-      setContractBalanceResult(`Contract Balance: ${ethers.formatEther(balance)} ETH`);
+      setContractBalanceResult(`Contract Balance: ${ethers.utils.formatEther(balance)} ETH`);
     } catch (error) {
+      setError(error.message);
       setContractBalanceResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -226,10 +280,15 @@ export default function CentralGovernmentDashboard() {
   };
 
   const getAllFundRequests = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
+      
       const requests = await contract.getFundRequests(
         parseInt(fundRequestOffset),
         parseInt(fundRequestLimit)
@@ -239,7 +298,7 @@ export default function CentralGovernmentDashboard() {
         result += `
           ID: ${request.id.toString()}
           Entity: ${request.entity}
-          Amount: ${ethers.formatEther(request.amount)} ETH
+          Amount: ${ethers.utils.formatEther(request.amount)} ETH
           Reason: ${request.reason}
           Document Hash: ${request.documentHash}
           Timestamp: ${new Date(request.timestamp.toNumber() * 1000).toLocaleString()}
@@ -248,6 +307,7 @@ export default function CentralGovernmentDashboard() {
       });
       setAllFundRequestsResult(result);
     } catch (error) {
+      setError(error.message);
       setAllFundRequestsResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -255,15 +315,25 @@ export default function CentralGovernmentDashboard() {
   };
 
   const approveRequest = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
+      
+      if (!requestId || isNaN(parseInt(requestId))) {
+        throw new Error('Invalid request ID');
+      }
+
       const tx = await contract.approveFundRequest(parseInt(requestId));
       await tx.wait();
       setAllFundRequestsResult('Fund request approved successfully!');
       setRequestId('');
     } catch (error) {
+      setError(error.message);
       setAllFundRequestsResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -271,15 +341,25 @@ export default function CentralGovernmentDashboard() {
   };
 
   const rejectRequest = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError('Please connect to the contract first');
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
+      
+      if (!requestId || isNaN(parseInt(requestId))) {
+        throw new Error('Invalid request ID');
+      }
+
       const tx = await contract.rejectFundRequest(parseInt(requestId));
       await tx.wait();
       setAllFundRequestsResult('Fund request rejected successfully!');
       setRequestId('');
     } catch (error) {
+      setError(error.message);
       setAllFundRequestsResult('Error: ' + error.message);
     } finally {
       setLoading(false);
@@ -309,7 +389,7 @@ export default function CentralGovernmentDashboard() {
             </div>
             <div className="flex items-center">
               <button
-                onClick={() => router.push('/')}
+                onClick={() => router.push("/")}
                 className="text-gray-300 hover:text-white transition-colors duration-200"
               >
                 Back to Role Selection
@@ -324,7 +404,13 @@ export default function CentralGovernmentDashboard() {
         <div className="w-64 bg-gray-800/30 backdrop-blur-md border-r border-gray-700/50 h-full overflow-y-auto">
           <div className="p-4 space-y-4">
             <div className="p-4 bg-gray-700/50 rounded-lg">
-              <div className={`${connectionStatus.includes('Connected') ? 'text-green-400' : 'text-red-400'}`}>
+              <div
+                className={`${
+                  connectionStatus.includes("Connected")
+                    ? "text-green-400"
+                    : "text-red-400"
+                }`}
+              >
                 {connectionStatus}
               </div>
               <button
@@ -338,31 +424,31 @@ export default function CentralGovernmentDashboard() {
 
             <nav className="space-y-2">
               <button
-                onClick={() => setActiveSection('entity')}
+                onClick={() => setActiveSection("entity")}
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
-                  activeSection === 'entity' 
-                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' 
-                    : 'text-gray-300 hover:bg-gray-700/50'
+                  activeSection === "entity"
+                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/50"
+                    : "text-gray-300 hover:bg-gray-700/50"
                 }`}
               >
                 Entity Management
               </button>
               <button
-                onClick={() => setActiveSection('monitoring')}
+                onClick={() => setActiveSection("monitoring")}
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
-                  activeSection === 'monitoring' 
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' 
-                    : 'text-gray-300 hover:bg-gray-700/50'
+                  activeSection === "monitoring"
+                    ? "bg-purple-500/20 text-purple-400 border border-purple-500/50"
+                    : "text-gray-300 hover:bg-gray-700/50"
                 }`}
               >
                 Monitoring
               </button>
               <button
-                onClick={() => setActiveSection('funds')}
+                onClick={() => setActiveSection("funds")}
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
-                  activeSection === 'funds' 
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
-                    : 'text-gray-300 hover:bg-gray-700/50'
+                  activeSection === "funds"
+                    ? "bg-green-500/20 text-green-400 border border-green-500/50"
+                    : "text-gray-300 hover:bg-gray-700/50"
                 }`}
               >
                 Fund Management
@@ -374,7 +460,13 @@ export default function CentralGovernmentDashboard() {
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto">
-            {activeSection === 'entity' && (
+            {error && (
+              <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                {error}
+              </div>
+            )}
+
+            {activeSection === "entity" && (
               <div className="bg-gray-800/30 backdrop-blur-md rounded-xl p-6 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300">
                 <h2 className="text-lg font-semibold mb-6 text-purple-400">Entity Management</h2>
                 
@@ -510,7 +602,7 @@ export default function CentralGovernmentDashboard() {
               </div>
             )}
 
-            {activeSection === 'monitoring' && (
+            {activeSection === "monitoring" && (
               <div className="space-y-6">
                 {/* View All Entities */}
                 <div className="bg-gray-800/30 backdrop-blur-md rounded-xl p-6 border border-gray-700/50 hover:border-pink-500/50 transition-all duration-300">
@@ -599,7 +691,7 @@ export default function CentralGovernmentDashboard() {
               </div>
             )}
 
-            {activeSection === 'funds' && (
+            {activeSection === "funds" && (
               <div className="space-y-6">
                 {/* Issue Funds */}
                 <div className="bg-gray-800/30 backdrop-blur-md rounded-xl p-6 border border-gray-700/50 hover:border-green-500/50 transition-all duration-300">
@@ -702,7 +794,11 @@ export default function CentralGovernmentDashboard() {
       {loading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-gray-800 p-8 rounded-xl border border-gray-700">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <div className={`animate-spin rounded-full h-12 w-12 border-b-2 mx-auto ${
+              activeSection === 'entity' ? 'border-blue-500' :
+              activeSection === 'monitoring' ? 'border-purple-500' :
+              activeSection === 'funds' ? 'border-green-500' : 'border-blue-500'
+            }`}></div>
             <p className="mt-4 text-center text-gray-300">Processing transaction...</p>
           </div>
         </div>
@@ -746,4 +842,4 @@ export default function CentralGovernmentDashboard() {
       `}</style>
     </div>
   );
-} 
+}

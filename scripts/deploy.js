@@ -8,9 +8,13 @@ async function main() {
   );
   const registry = await SimplifiedSpendingRegistry.deploy();
 
-  await registry.deployed();
+  // Wait for deployment transaction to be mined
+  await registry.waitForDeployment();
 
-  console.log("SimplifiedSpendingRegistry deployed to:", registry.address);
+  console.log(
+    "SimplifiedSpendingRegistry deployed to:",
+    await registry.getAddress()
+  );
   console.log(
     "Central Government address:",
     await registry.centralGovernment()
