@@ -52,7 +52,7 @@ contract SimplifiedSpendingRegistry {
     mapping(uint256 => SpendingRecord) public spendingRecords;
     mapping(uint256 => MicroTransaction) public microTransactions;
     mapping(uint256 => IssuedFund) public issuedFunds;
-    mapping(address => bool) public hasVoted;
+    mapping(address => mapping(address => bool)) public hasVoted;
     address[] public entityAddresses;
     uint256 public recordCount;
     uint256 public requestCount;
@@ -425,6 +425,7 @@ contract SimplifiedSpendingRegistry {
     function voteForEntity(address entityAddress, uint256 rating) public {
         require(governmentEntities[entityAddress].isActive, "Entity is not active");
         require(rating >= 1 && rating <= 5, "Rating must be between 1 and 5");
+        require(!hasVoted[msg.sender][entityAddress], "You have already voted for this entity");
         
         // Update entity's happiness rating
         uint256 currentRating = governmentEntities[entityAddress].happinessRating;
@@ -434,6 +435,9 @@ contract SimplifiedSpendingRegistry {
         governmentEntities[entityAddress].happinessRating = newRating;
         governmentEntities[entityAddress].totalVotes += 1;
         governmentEntities[entityAddress].lastVoteTimestamp = block.timestamp;
+        
+        // Mark this voter as having voted for this entity
+        hasVoted[msg.sender][entityAddress] = true;
         
         emit Voted(msg.sender, entityAddress, rating);
     }
@@ -496,7 +500,7 @@ contract SimplifiedSpendingRegistry {
 
     // Check if an address has voted
     function checkVotingStatus(address voter) public view returns (bool) {
-        return hasVoted[voter];
+        return hasVoted[voter][msg.sender];
     }
 
     // Get time until next bonus distribution

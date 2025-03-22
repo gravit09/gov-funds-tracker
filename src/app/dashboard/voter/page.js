@@ -1,16 +1,16 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+"use client";
+import React, { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function VoterDashboard() {
   // State declarations
-  const [selectedVoter, setSelectedVoter] = useState('');
-  const [connectionStatus, setConnectionStatus] = useState('');
+  const [selectedVoter, setSelectedVoter] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState("");
   const [selectedRating, setSelectedRating] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [contract, setContract] = useState(null);
   const [signer, setSigner] = useState(null);
   const [allRatings, setAllRatings] = useState([]);
@@ -18,13 +18,33 @@ export default function VoterDashboard() {
   const [bonusTime, setBonusTime] = useState(null);
 
   const pathname = usePathname();
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [activeSection, setActiveSection] = useState("dashboard");
 
   const sidebarLinks = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', href: '/dashboard/voter' },
-    { id: 'voting', label: 'Vote', icon: '🗳️', href: '/dashboard/voter/voting' },
-    { id: 'ratings', label: 'View Ratings', icon: '⭐', href: '/dashboard/voter/ratings' },
-    { id: 'bonus', label: 'Performance Bonus', icon: '💰', href: '/dashboard/voter/bonus' },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: "📊",
+      href: "/dashboard/voter",
+    },
+    {
+      id: "voting",
+      label: "Vote",
+      icon: "🗳️",
+      href: "/dashboard/voter/voting",
+    },
+    {
+      id: "ratings",
+      label: "View Ratings",
+      icon: "⭐",
+      href: "/dashboard/voter/ratings",
+    },
+    {
+      id: "bonus",
+      label: "Performance Bonus",
+      icon: "💰",
+      href: "/dashboard/voter/bonus",
+    },
   ];
 
   // Contract configuration
@@ -41,35 +61,37 @@ export default function VoterDashboard() {
   const connectToContract = async () => {
     try {
       // Clear any previous errors
-      setError('');
-      
+      setError("");
+
       // Validate account selection
       if (!selectedVoter) {
-        setError('Please select a voter account first');
-        setConnectionStatus('Connection failed: No account selected');
+        setError("Please select a voter account first");
+        setConnectionStatus("Connection failed: No account selected");
         return;
       }
 
       setIsLoading(true);
 
-      const provider = new ethers.JsonRpcProvider(
-        "http://127.0.0.1:8545",
-        { 
-          chainId: 31337, // Updated to match hardhat.config.js
-          name: 'hardhat',
-          ensAddress: null,
-          ensNetwork: null
-        }
-      );
+      const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545", {
+        chainId: 31337, // Updated to match hardhat.config.js
+        name: "hardhat",
+        ensAddress: null,
+        ensNetwork: null,
+      });
 
       // Use the selected account's private key
-      const privateKey = selectedVoter === "0xdD2FD4581271e230360230F9337D5c0430Bf44C0"
-        ? "0xde9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0"
-        : "0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e";
+      const privateKey =
+        selectedVoter === "0xdD2FD4581271e230360230F9337D5c0430Bf44C0"
+          ? "0xde9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0"
+          : "0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e";
 
       const newSigner = new ethers.Wallet(privateKey, provider);
-      const newContract = new ethers.Contract(contractAddress, contractABI, newSigner);
-      
+      const newContract = new ethers.Contract(
+        contractAddress,
+        contractABI,
+        newSigner
+      );
+
       setSigner(newSigner);
       setContract(newContract);
       setConnectionStatus(`Connected as: ${selectedVoter}`);
@@ -90,10 +112,10 @@ export default function VoterDashboard() {
     setSelectedVoter(value);
     // Clear connection status and contract when changing accounts
     if (value !== selectedVoter) {
-      setConnectionStatus('');
+      setConnectionStatus("");
       setContract(null);
       setSigner(null);
-      setError('');
+      setError("");
     }
   };
 
@@ -105,7 +127,7 @@ export default function VoterDashboard() {
       const ratingsData = addresses.map((address, index) => ({
         address,
         rating: ratings[index].toString(),
-        votes: votes[index].toString()
+        votes: votes[index].toString(),
       }));
       setAllRatings(ratingsData);
     } catch (error) {
@@ -119,11 +141,12 @@ export default function VoterDashboard() {
   const getEntityRating = async (address) => {
     try {
       setIsLoading(true);
-      const [rating, totalVotes, lastVoteTime] = await contract.getEntityHappinessRating(address);
+      const [rating, totalVotes, lastVoteTime] =
+        await contract.getEntityHappinessRating(address);
       setEntityRating({
         rating: rating.toString(),
         totalVotes: totalVotes.toString(),
-        lastVoteTime: new Date(lastVoteTime.toNumber() * 1000).toLocaleString()
+        lastVoteTime: new Date(Number(lastVoteTime) * 1000).toLocaleString(),
       });
     } catch (error) {
       setError(error.message);
@@ -135,15 +158,55 @@ export default function VoterDashboard() {
   // Submit vote
   const submitVote = async (entityAddress) => {
     try {
+      if (!entityAddress) {
+        throw new Error("Please enter an entity address");
+      }
       if (!selectedRating) {
         throw new Error("Please select a rating");
       }
+      if (!contract) {
+        throw new Error("Please connect your account first");
+      }
+
       setIsLoading(true);
+      setError("");
+
+      // First check if already voted
+      const hasVoted = await contract.checkVotingStatus(entityAddress);
+      if (hasVoted) {
+        throw new Error(
+          "You have already voted for this entity. You can only vote once per entity."
+        );
+      }
+
       const tx = await contract.voteForEntity(entityAddress, selectedRating);
       await tx.wait();
-      setError('');
+
+      // Clear form and show success message
+      document.querySelector("input").value = "";
+      setSelectedRating(0);
+      setError(
+        "Vote submitted successfully! Thank you for your participation."
+      );
+
+      // Update the entity rating display
+      await getEntityRating(entityAddress);
     } catch (error) {
-      setError(error.message);
+      // Handle specific error cases
+      if (error.message.includes("already voted")) {
+        setError(
+          "You have already voted for this entity. You can only vote once per entity."
+        );
+      } else if (error.message.includes("not active")) {
+        setError("This entity is not currently active in the system.");
+      } else if (error.message.includes("insufficient funds")) {
+        setError("Transaction failed due to insufficient funds.");
+      } else {
+        setError(
+          error.message ||
+            "An error occurred while submitting your vote. Please try again."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -183,12 +246,16 @@ export default function VoterDashboard() {
         <div className="w-64 min-h-screen bg-gray-800/50 backdrop-blur-sm border-r border-gray-700">
           {/* Account Selection */}
           <div className="p-4 border-b border-gray-700">
-            <h5 className="font-semibold text-white mb-2">Select Voter Account</h5>
-            <select 
+            <h5 className="font-semibold text-white mb-2">
+              Select Voter Account
+            </h5>
+            <select
               value={selectedVoter}
               onChange={handleAccountSelect}
               className={`w-full p-2 bg-gray-700 border rounded text-white transition-colors ${
-                error && !selectedVoter ? 'border-red-500 focus:border-red-500' : 'border-gray-600'
+                error && !selectedVoter
+                  ? "border-red-500 focus:border-red-500"
+                  : "border-gray-600"
               }`}
             >
               <option value="">Select an account</option>
@@ -200,25 +267,27 @@ export default function VoterDashboard() {
               </option>
             </select>
             {error && !selectedVoter && (
-              <p className="mt-1 text-sm text-red-400">
-                {error}
-              </p>
+              <p className="mt-1 text-sm text-red-400">{error}</p>
             )}
-            <button 
+            <button
               onClick={connectToContract}
               disabled={!selectedVoter || isLoading}
               className={`w-full mt-2 px-4 py-2 rounded transition-colors font-medium ${
                 !selectedVoter || isLoading
-                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : "bg-blue-500 text-white hover:bg-blue-600"
               }`}
             >
-              {isLoading ? 'Connecting...' : 'Connect as Selected Voter'}
+              {isLoading ? "Connecting..." : "Connect as Selected Voter"}
             </button>
             {connectionStatus && (
-              <p className={`mt-2 text-sm ${
-                connectionStatus.includes('failed') ? 'text-red-400' : 'text-green-400'
-              }`}>
+              <p
+                className={`mt-2 text-sm ${
+                  connectionStatus.includes("failed")
+                    ? "text-red-400"
+                    : "text-green-400"
+                }`}
+              >
                 {connectionStatus}
               </p>
             )}
@@ -233,8 +302,8 @@ export default function VoterDashboard() {
                   href={link.href}
                   className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                     pathname === link.href
-                      ? 'bg-blue-500 text-white'
-                      : 'text-gray-300 hover:bg-gray-700/50'
+                      ? "bg-blue-500 text-white"
+                      : "text-gray-300 hover:bg-gray-700/50"
                   }`}
                 >
                   <span className="text-xl">{link.icon}</span>
@@ -251,9 +320,12 @@ export default function VoterDashboard() {
             // Not connected state
             <div className="max-w-2xl mx-auto text-center">
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700 p-8">
-                <h2 className="text-2xl font-bold text-white mb-4">Welcome to the Voter Dashboard</h2>
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  Welcome to the Voter Dashboard
+                </h2>
                 <p className="text-gray-300 mb-6">
-                  Please select a voter account and connect to access the dashboard features.
+                  Please select a voter account and connect to access the
+                  dashboard features.
                 </p>
                 <div className="flex justify-center">
                   <span className="text-6xl">🗳️</span>
@@ -266,21 +338,34 @@ export default function VoterDashboard() {
               {/* Entity Ratings */}
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700">
                 <div className="p-4 border-b border-gray-700">
-                  <h5 className="font-semibold text-white">Entity Performance Ratings</h5>
+                  <h5 className="font-semibold text-white">
+                    Entity Performance Ratings
+                  </h5>
                 </div>
                 <div className="p-4">
                   {allRatings.length > 0 ? (
                     <div className="space-y-4">
                       {allRatings.map((rating, index) => (
-                        <div key={index} className="bg-gray-700/50 p-4 rounded-lg">
-                          <p className="text-gray-300">Entity: {rating.address}</p>
-                          <p className="text-gray-300">Rating: {rating.rating}/5</p>
-                          <p className="text-gray-300">Total Votes: {rating.votes}</p>
+                        <div
+                          key={index}
+                          className="bg-gray-700/50 p-4 rounded-lg"
+                        >
+                          <p className="text-gray-300">
+                            Entity: {rating.address}
+                          </p>
+                          <p className="text-gray-300">
+                            Rating: {rating.rating}/5
+                          </p>
+                          <p className="text-gray-300">
+                            Total Votes: {rating.votes}
+                          </p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-400">No ratings available. Click "Get All Ratings" to view.</p>
+                    <p className="text-gray-400">
+                      No ratings available. Click "Get All Ratings" to view.
+                    </p>
                   )}
                 </div>
               </div>
@@ -288,7 +373,9 @@ export default function VoterDashboard() {
               {/* Specific Entity Rating */}
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700">
                 <div className="p-4 border-b border-gray-700">
-                  <h5 className="font-semibold text-white">Specific Entity Rating</h5>
+                  <h5 className="font-semibold text-white">
+                    Specific Entity Rating
+                  </h5>
                 </div>
                 <div className="p-4">
                   <input
@@ -299,9 +386,15 @@ export default function VoterDashboard() {
                   />
                   {entityRating && (
                     <div className="bg-gray-700/50 p-4 rounded-lg">
-                      <p className="text-gray-300">Rating: {entityRating.rating}/5</p>
-                      <p className="text-gray-300">Total Votes: {entityRating.totalVotes}</p>
-                      <p className="text-gray-300">Last Vote Time: {entityRating.lastVoteTime}</p>
+                      <p className="text-gray-300">
+                        Rating: {entityRating.rating}/5
+                      </p>
+                      <p className="text-gray-300">
+                        Total Votes: {entityRating.totalVotes}
+                      </p>
+                      <p className="text-gray-300">
+                        Last Vote Time: {entityRating.lastVoteTime}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -310,33 +403,57 @@ export default function VoterDashboard() {
               {/* Voting Section */}
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700 md:col-span-2">
                 <div className="p-4 border-b border-gray-700">
-                  <h5 className="font-semibold text-white">Vote for Entity Performance</h5>
+                  <h5 className="font-semibold text-white">
+                    Vote for Entity Performance
+                  </h5>
                 </div>
                 <div className="p-4">
                   <div className="space-y-4">
-                    <input
-                      type="text"
-                      placeholder="Entity Address"
-                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
-                    />
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <span
-                          key={rating}
-                          className={`cursor-pointer text-2xl transition-colors ${
-                            rating <= selectedRating ? 'text-yellow-400' : 'text-gray-600'
-                          }`}
-                          onClick={() => setSelectedRating(rating)}
-                        >
-                          ★
-                        </span>
-                      ))}
+                    <div>
+                      <label className="block text-gray-300 mb-2">
+                        Entity Address
+                      </label>
+                      <input
+                        type="text"
+                        id="entityAddress"
+                        placeholder="Enter entity address"
+                        className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                     </div>
-                    <button 
-                      onClick={() => submitVote(document.querySelector('input').value)}
-                      className="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                    <div>
+                      <label className="block text-gray-300 mb-2">
+                        Select Rating
+                      </label>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <span
+                            key={rating}
+                            className={`cursor-pointer text-2xl transition-colors ${
+                              rating <= selectedRating
+                                ? "text-yellow-400"
+                                : "text-gray-600"
+                            }`}
+                            onClick={() => setSelectedRating(rating)}
+                          >
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        submitVote(
+                          document.getElementById("entityAddress").value
+                        )
+                      }
+                      disabled={isLoading || !contract}
+                      className={`w-full px-4 py-2 rounded transition-colors font-medium ${
+                        isLoading || !contract
+                          ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                          : "bg-green-500 text-white hover:bg-green-600"
+                      }`}
                     >
-                      Submit Vote
+                      {isLoading ? "Submitting Vote..." : "Submit Vote"}
                     </button>
                   </div>
                 </div>
@@ -345,13 +462,19 @@ export default function VoterDashboard() {
               {/* Bonus Time */}
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700 md:col-span-2">
                 <div className="p-4 border-b border-gray-700">
-                  <h5 className="font-semibold text-white">Performance Bonus Status</h5>
+                  <h5 className="font-semibold text-white">
+                    Performance Bonus Status
+                  </h5>
                 </div>
                 <div className="p-4">
                   {bonusTime && (
                     <div className="bg-gray-700/50 p-4 rounded-lg">
-                      <p className="text-gray-300">Time until next bonus distribution:</p>
-                      <p className="text-gray-300">{bonusTime.hours} hours and {bonusTime.minutes} minutes</p>
+                      <p className="text-gray-300">
+                        Time until next bonus distribution:
+                      </p>
+                      <p className="text-gray-300">
+                        {bonusTime.hours} hours and {bonusTime.minutes} minutes
+                      </p>
                     </div>
                   )}
                 </div>
@@ -371,12 +494,18 @@ export default function VoterDashboard() {
         </div>
       )}
 
-      {/* Error Display */}
-      {error && selectedVoter && (
-        <div className="fixed bottom-4 right-4 bg-red-900/50 backdrop-blur-sm border border-red-500 text-red-200 px-4 py-3 rounded-lg">
+      {/* Error/Success Display */}
+      {error && (
+        <div
+          className={`fixed bottom-4 right-4 backdrop-blur-sm border px-4 py-3 rounded-lg ${
+            error.includes("successfully")
+              ? "bg-green-900/50 border-green-500 text-green-200"
+              : "bg-red-900/50 border-red-500 text-red-200"
+          }`}
+        >
           {error}
         </div>
       )}
     </div>
   );
-} 
+}

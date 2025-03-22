@@ -26,6 +26,8 @@ export default function EntityDashboard() {
     "function getEntitySpendingRecords(address entityAddress, uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, string purpose, uint256 amount, string documentHash, uint256 timestamp)[] memory)",
     "function requestFunds(uint256 amount, string memory reason, string memory documentHash) public",
     "function getEntityFundRequests(address entityAddress, uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, uint256 amount, string reason, string documentHash, uint256 timestamp, bool isApproved, bool isRejected)[] memory)",
+    "function recordMicroTransaction(uint256 spendingId, uint256 amount, string memory description) public",
+    "function getMicroTransactions(uint256 spendingId) public view returns (tuple(uint256 id, uint256 spendingId, address entity, uint256 amount, string description, uint256 timestamp)[] memory)",
   ];
 
   // Get entity accounts from addresses.json
@@ -40,6 +42,16 @@ export default function EntityDashboard() {
   // State for contract connection
   const [contract, setContract] = useState(null);
   const [signer, setSigner] = useState(null);
+
+  // Add new state variables for micro-transactions
+  const [microTransactionSpendingId, setMicroTransactionSpendingId] =
+    useState("");
+  const [microTransactionAmount, setMicroTransactionAmount] = useState("");
+  const [microTransactionDescription, setMicroTransactionDescription] =
+    useState("");
+  const [microTransactionResult, setMicroTransactionResult] = useState("");
+  const [selectedSpendingId, setSelectedSpendingId] = useState("");
+  const [microTransactionsList, setMicroTransactionsList] = useState("");
 
   // Connect to the contract
   const connectToContract = async () => {
@@ -233,6 +245,56 @@ export default function EntityDashboard() {
     }
   };
 
+  // Add new function to record micro-transaction
+  const recordMicroTransaction = async () => {
+    if (!contract) return;
+
+    try {
+      setIsLoading(true);
+      const amount = ethers.parseEther(microTransactionAmount);
+      const tx = await contract.recordMicroTransaction(
+        parseInt(microTransactionSpendingId),
+        amount,
+        microTransactionDescription
+      );
+      await tx.wait();
+      setMicroTransactionResult("Micro-transaction recorded successfully!");
+      setMicroTransactionSpendingId("");
+      setMicroTransactionAmount("");
+      setMicroTransactionDescription("");
+    } catch (error) {
+      setMicroTransactionResult("Error: " + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add new function to get micro-transactions
+  const getMicroTransactions = async () => {
+    if (!contract || !selectedSpendingId) return;
+
+    try {
+      setIsLoading(true);
+      const transactions = await contract.getMicroTransactions(
+        parseInt(selectedSpendingId)
+      );
+      let result = "Micro-transactions:\n";
+      transactions.forEach((tx) => {
+        result += `
+          ID: ${tx.id.toString()}
+          Amount: ${ethers.formatEther(tx.amount)} ETH
+          Description: ${tx.description}
+          Timestamp: ${new Date(Number(tx.timestamp) * 1000).toLocaleString()}
+        \n`;
+      });
+      setMicroTransactionsList(result);
+    } catch (error) {
+      setMicroTransactionsList("Error: " + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Navigation items
   const tabs = [
     { id: "connection", label: "Connect Wallet" },
@@ -387,6 +449,89 @@ export default function EntityDashboard() {
                     dangerouslySetInnerHTML={{ __html: spendingRecords }}
                   />
                 </form>
+              </div>
+
+              {/* Micro-transaction Management */}
+              <div className="bg-gray-800/30 backdrop-blur-md rounded-xl p-6 border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300">
+                <h2 className="text-lg font-semibold mb-4 text-blue-400">
+                  Micro-transaction Management
+                </h2>
+
+                {/* Record Micro-transaction */}
+                <div className="space-y-4 mb-6">
+                  <h3 className="text-md font-medium text-gray-300">
+                    Record Micro-transaction
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input
+                      type="number"
+                      value={microTransactionSpendingId}
+                      onChange={(e) =>
+                        setMicroTransactionSpendingId(e.target.value)
+                      }
+                      placeholder="Spending ID"
+                      className="bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <input
+                      type="number"
+                      value={microTransactionAmount}
+                      onChange={(e) =>
+                        setMicroTransactionAmount(e.target.value)
+                      }
+                      placeholder="Amount (ETH)"
+                      className="bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={microTransactionDescription}
+                    onChange={(e) =>
+                      setMicroTransactionDescription(e.target.value)
+                    }
+                    placeholder="Description"
+                    className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={recordMicroTransaction}
+                    disabled={isLoading}
+                    className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20"
+                  >
+                    Record Micro-transaction
+                  </button>
+                  {microTransactionResult && (
+                    <div className="mt-2 text-sm text-gray-300">
+                      {microTransactionResult}
+                    </div>
+                  )}
+                </div>
+
+                {/* View Micro-transactions */}
+                <div className="space-y-4">
+                  <h3 className="text-md font-medium text-gray-300">
+                    View Micro-transactions
+                  </h3>
+                  <div className="flex gap-4">
+                    <input
+                      type="number"
+                      value={selectedSpendingId}
+                      onChange={(e) => setSelectedSpendingId(e.target.value)}
+                      placeholder="Spending ID"
+                      className="flex-1 bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={getMicroTransactions}
+                      disabled={isLoading}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20"
+                    >
+                      View Micro-transactions
+                    </button>
+                  </div>
+                  {microTransactionsList && (
+                    <pre className="mt-2 p-4 bg-gray-700/30 rounded-lg text-sm text-gray-300 overflow-x-auto">
+                      {microTransactionsList}
+                    </pre>
+                  )}
+                </div>
               </div>
             </div>
           </div>
