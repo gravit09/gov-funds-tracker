@@ -135,11 +135,11 @@ export default function Home() {
 
           {/* Citizen Card */}
           <Link 
-            href="/dashboard/citizen"
+            href="/dashboard/audit"
             className="block bg-gray-800/50 backdrop-blur-sm rounded-lg p-8 transform transition-all hover:-translate-y-2 hover:shadow-lg hover:shadow-purple-500/20 border border-gray-700"
           >
             <div className="text-4xl mb-4">👥</div>
-            <h3 className="text-2xl font-semibold mb-4">Citizen</h3>
+            <h3 className="text-2xl font-semibold mb-4">Audit</h3>
             <p className="text-gray-300 mb-6">
               View spending records, track fund allocation, and monitor government performance.
             </p>
