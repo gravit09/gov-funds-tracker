@@ -498,7 +498,7 @@ contract SimplifiedSpendingRegistry {
         return (addresses, ratings, votes);
     }
 
-    // Check if an address has voted
+    // Check if an address has already voted
     function checkVotingStatus(address voter) public view returns (bool) {
         return hasVoted[voter][msg.sender];
     }

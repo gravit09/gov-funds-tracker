@@ -45,7 +45,7 @@ export default function CentralGovernmentDashboard() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Contract configuration
-  const contractAddress = addresses.contracts.main;
+  const contractAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
   const contractABI = [
     "function registerEntity(address entityAddress, string memory name) public",
     "function deactivateEntity(address entityAddress) public",
@@ -87,9 +87,19 @@ export default function CentralGovernmentDashboard() {
 
     try {
       setLoading(true);
+      setError("");
 
       // Connect to local Hardhat network
       const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+
+      // Test network connection
+      try {
+        await provider.getNetwork();
+      } catch (error) {
+        throw new Error(
+          "Failed to connect to the Hardhat network. Please ensure it's running."
+        );
+      }
 
       // Get the private key for the selected account
       const [address, account] = centralGovAccount;
@@ -103,6 +113,15 @@ export default function CentralGovernmentDashboard() {
         contractABI,
         newSigner
       );
+
+      // Test contract connection
+      try {
+        await newContract.getEntityDetails(contractAddress);
+      } catch (error) {
+        throw new Error(
+          "Failed to connect to the contract. Please check if the contract is deployed."
+        );
+      }
 
       setSigner(newSigner);
       setContract(newContract);
@@ -197,19 +216,58 @@ export default function CentralGovernmentDashboard() {
   };
 
   const getAllEntities = async () => {
-    if (!contract) return;
+    if (!contract) {
+      setError("Please connect your account first");
+      return;
+    }
 
     try {
       setLoading(true);
-      const addresses = await contract.getAllEntityAddresses();
-      let result = "Registered Entities:\n";
-      for (let i = 0; i < addresses.length; i++) {
-        const [name] = await contract.getEntityDetails(addresses[i]);
-        result += `${i + 1}. ${name} (${addresses[i]})\n`;
+      setError("");
+
+      // Test contract connection
+      try {
+        await contract.getEntityDetails(contractAddress);
+      } catch (error) {
+        throw new Error(
+          "Failed to connect to the contract. Please check if the contract is deployed."
+        );
       }
+
+      // Get all entity addresses
+      const entityAddresses = await contract.getAllEntityAddresses();
+      console.log("Retrieved entity addresses:", entityAddresses);
+
+      if (!entityAddresses || entityAddresses.length === 0) {
+        setAllEntitiesResult("No entities found.");
+        return;
+      }
+
+      // Get details for each entity
+      let result = "Registered Entities:\n\n";
+      for (const address of entityAddresses) {
+        try {
+          const [name, isActive, balance] = await contract.getEntityDetails(
+            address
+          );
+          result += `Name: ${name}\n`;
+          result += `Address: ${address}\n`;
+          result += `Status: ${isActive ? "Active" : "Not Active"}\n`;
+          result += `Balance: ${ethersModule.formatEther(balance)} ETH\n`;
+          result += "-------------------\n\n";
+        } catch (error) {
+          console.error(`Error getting details for entity ${address}:`, error);
+          result += `Address: ${address}\n`;
+          result += `Error: Failed to load details\n`;
+          result += "-------------------\n\n";
+        }
+      }
+
       setAllEntitiesResult(result);
     } catch (error) {
-      setAllEntitiesResult("Error: " + error.message);
+      console.error("Get all entities error:", error);
+      setError(error.message);
+      setAllEntitiesResult("");
     } finally {
       setLoading(false);
     }

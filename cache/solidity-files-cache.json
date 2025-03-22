@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/gravitsingh/Desktop/gov-funds/contracts/SimplifiedSpendingRegistry.sol": {
-      "lastModificationDate": 1742670427374,
-      "contentHash": "299cc4b9c43f81daacc79cc9cb6d7868",
+      "lastModificationDate": 1742676905539,
+      "contentHash": "8e5081f2305728b1e1c58e5ded86d275",
       "sourceName": "contracts/SimplifiedSpendingRegistry.sol",
       "solcConfig": {
         "version": "0.8.19",
@@ -39,8 +39,8 @@
       ]
     },
     "/Users/gravitsingh/Desktop/gov-funds/contracts/GovernmentFunds.sol": {
-      "lastModificationDate": 1742670779846,
-      "contentHash": "b21d2bc449cbbc903cb203850f2a4988",
+      "lastModificationDate": 1742684340754,
+      "contentHash": "fb47e092cf36088f59fdfa66a5b5e5b9",
       "sourceName": "contracts/GovernmentFunds.sol",
       "solcConfig": {
         "version": "0.8.19",
