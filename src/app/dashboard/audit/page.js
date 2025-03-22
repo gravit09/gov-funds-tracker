@@ -1,8 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ethers } from "ethers";
 import { usePathname } from "next/navigation";
+import IPFSUpload from "@/components/IPFSUpload";
+import addresses from "@/config/addresses.json";
 
 export default function AuditPage() {
   const [selectedAuditor, setSelectedAuditor] = useState("");
@@ -34,7 +36,7 @@ export default function AuditPage() {
   ];
 
   // Contract configuration
-  const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+  const contractAddress = addresses.contracts.main;
   const contractABI = [
     "function getIssuedFunds(uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, uint256 amount, uint256 timestamp)[] memory)",
     "function getSpendingRecords(uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, string purpose, uint256 amount, string documentHash, uint256 timestamp)[] memory)",
@@ -43,6 +45,11 @@ export default function AuditPage() {
     "function getTimeUntilNextBonus() public view returns (uint256)",
     "function getMicroTransactions(uint256 offset, uint256 limit) public view returns (tuple(uint256 id, uint256 spendingRecordId, address entity, string description, uint256 amount, uint256 timestamp)[] memory)",
   ];
+
+  // Get auditor account from addresses.json
+  const auditorAccount = Object.entries(addresses.accounts).find(
+    ([_, account]) => account.name === "Auditor"
+  );
 
   // Helper function to format error messages
   const formatErrorMessage = (error) => {
@@ -110,47 +117,35 @@ export default function AuditPage() {
   const connectToContract = async () => {
     try {
       if (!selectedAuditor) {
-        throw new Error("Please select an auditor account first");
+        throw new Error("Please select an auditor account");
       }
 
       setIsLoading(true);
       setError("");
 
-      const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545", {
-        chainId: 31337,
-        name: "hardhat",
-        ensAddress: null,
-        ensNetwork: null,
-      });
+      // Connect to local Hardhat network
+      const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
 
-      const privateKey =
-        "0x689af8efa8c651a91ad287602527f3af2fe9f6501a7ac4b061667b5a93e037fd";
-      const newSigner = new ethers.Wallet(privateKey, provider);
+      // Get the private key for the selected auditor
+      const [address, account] = auditorAccount;
+      if (!account) {
+        throw new Error("Auditor account not found");
+      }
+
+      const newSigner = new ethers.Wallet(account.privateKey, provider);
       const newContract = new ethers.Contract(
         contractAddress,
         contractABI,
         newSigner
       );
 
-      await provider.getNetwork();
-
       setSigner(newSigner);
       setContract(newContract);
-      setConnectionStatus({
-        title: "Connection Successful",
-        message: `Connected as: ${selectedAuditor}`,
-        type: "success",
-      });
+      setConnectionStatus(`Connected as ${account.name}`);
     } catch (error) {
       console.error("Connection error:", error);
-      setConnectionStatus({
-        title: "Connection Failed",
-        message: "Unable to connect to the network. Please try again.",
-        type: "error",
-      });
-      setError(formatErrorMessage(error));
-      setSigner(null);
-      setContract(null);
+      setConnectionStatus(`Connection failed: ${error.message}`);
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -319,13 +314,15 @@ export default function AuditPage() {
                   className="bg-gray-700/30 rounded-lg p-4 hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all duration-300"
                 >
                   <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-gray-300">ID: {fund.id.toString()}</p>
-                      <p className="text-gray-400 text-sm">
+                    <div className="flex-1 min-w-0 mr-4">
+                      <p className="text-gray-300 truncate">
+                        ID: {fund.id.toString()}
+                      </p>
+                      <p className="text-gray-400 text-sm truncate">
                         Entity: {fund.entity}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="text-blue-400 font-semibold">
                         {ethers.formatEther(fund.amount)} ETH
                       </p>
@@ -361,21 +358,21 @@ export default function AuditPage() {
                   key={index}
                   className="bg-gray-700/30 rounded-lg p-4 hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all duration-300"
                 >
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="min-w-0">
+                      <p className="text-gray-300 truncate">
                         ID: {record.id.toString()}
                       </p>
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-gray-400 text-sm truncate">
                         Entity: {record.entity}
                       </p>
-                      <p className="text-gray-400">{record.purpose}</p>
+                      <p className="text-gray-400 truncate">{record.purpose}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="text-blue-400 font-semibold">
                         {ethers.formatEther(record.amount)} ETH
                       </p>
-                      <p className="text-gray-500 text-sm">
+                      <p className="text-gray-500 text-sm truncate">
                         Hash: {record.documentHash.slice(0, 10)}...
                       </p>
                       <p className="text-gray-500 text-sm">
@@ -410,15 +407,17 @@ export default function AuditPage() {
                   key={index}
                   className="bg-gray-700/30 rounded-lg p-4 hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all duration-300"
                 >
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-300">ID: {tx.id.toString()}</p>
-                      <p className="text-gray-400 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="min-w-0">
+                      <p className="text-gray-300 truncate">
+                        ID: {tx.id.toString()}
+                      </p>
+                      <p className="text-gray-400 text-sm truncate">
                         Record ID: {tx.spendingRecordId.toString()}
                       </p>
-                      <p className="text-gray-400">{tx.description}</p>
+                      <p className="text-gray-400 truncate">{tx.description}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="text-blue-400 font-semibold">
                         {ethers.formatEther(tx.amount)} ETH
                       </p>
@@ -452,17 +451,17 @@ export default function AuditPage() {
                   key={index}
                   className="bg-gray-700/30 rounded-lg p-4 hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all duration-300"
                 >
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="min-w-0">
+                      <p className="text-gray-300 truncate">
                         ID: {request.id.toString()}
                       </p>
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-gray-400 text-sm truncate">
                         Entity: {request.entity}
                       </p>
-                      <p className="text-gray-400">{request.reason}</p>
+                      <p className="text-gray-400 truncate">{request.reason}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="text-blue-400 font-semibold">
                         {ethers.formatEther(request.amount)} ETH
                       </p>
@@ -513,15 +512,17 @@ export default function AuditPage() {
                   key={index}
                   className="bg-gray-700/30 rounded-lg p-4 hover:shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all duration-300"
                 >
-                  <p className="text-gray-300 mb-2">Entity: {rating.address}</p>
+                  <p className="text-gray-300 mb-2 truncate">
+                    Entity: {rating.address}
+                  </p>
                   <div className="flex items-center space-x-2">
                     <div className="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-yellow-400 rounded-full"
+                        className="h-full bg-yellow-400 rounded-full transition-all duration-300"
                         style={{ width: `${(rating.rating / 5) * 100}%` }}
                       />
                     </div>
-                    <span className="text-yellow-400 font-semibold">
+                    <span className="text-yellow-400 font-semibold flex-shrink-0">
                       {rating.rating}/5
                     </span>
                   </div>
@@ -539,65 +540,105 @@ export default function AuditPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob"></div>
-        <div className="absolute top-0 -right-20 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-40 -left-20 w-80 h-80 bg-green-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-4000"></div>
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-0 -right-20 w-96 h-96 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-40 -left-20 w-96 h-96 bg-green-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
       {/* Navigation */}
-      <nav className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700">
+      <nav className="bg-gray-800/40 backdrop-blur-md border-b border-gray-700/50 sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-bold text-white">
+            <h1 className="text-xl font-bold text-white tracking-tight">
               Transaction Audit Dashboard
             </h1>
-            <Link href="/" className="text-blue-400 hover:text-blue-300">
-              Back to Role Selection
+            <Link
+              href="/"
+              className="text-blue-400 hover:text-blue-300 transition-colors duration-200 flex items-center space-x-2"
+            >
+              <span>Back to Role Selection</span>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
             </Link>
           </div>
         </div>
       </nav>
 
-      <div className="flex">
+      <div className="flex min-h-[calc(100vh-4rem)]">
         {/* Sidebar */}
-        <div className="w-64 min-h-screen bg-gray-800/50 backdrop-blur-sm border-r border-gray-700">
+        <div className="w-64 bg-gray-800/40 backdrop-blur-md border-r border-gray-700/50 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
           {/* Account Selection */}
-          <div className="p-4 border-b border-gray-700">
-            <h5 className="font-semibold text-white mb-2">
+          <div className="p-4 border-b border-gray-700/50">
+            <h5 className="font-semibold text-white mb-3">
               Select Auditor Account
             </h5>
             <select
               value={selectedAuditor}
               onChange={(e) => setSelectedAuditor(e.target.value)}
-              className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
             >
-              <option value="">Select an account</option>
-              <option value="0xbDA5747bFD65F08deb54cb465eB87D40e51B197E">
-                Auditor (0xbDA5...197E)
-              </option>
+              <option value="">Select an auditor...</option>
+              {auditorAccount && (
+                <option value={auditorAccount[0]}>
+                  {auditorAccount[1].name}
+                </option>
+              )}
             </select>
             <button
               onClick={connectToContract}
-              className="w-full mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+              className="w-full mt-3 bg-blue-500/80 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               disabled={!selectedAuditor || isLoading}
             >
-              {isLoading ? "Connecting..." : "Connect as Auditor"}
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Connecting...</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  <span>Connect as Auditor</span>
+                </>
+              )}
             </button>
             {connectionStatus && (
-              <p
-                className={`mt-2 text-sm ${
+              <div
+                className={`mt-3 p-3 rounded-lg text-sm ${
                   connectionStatus.type === "error"
-                    ? "text-red-400"
+                    ? "bg-red-500/10 border border-red-500/20 text-red-400"
                     : connectionStatus.type === "success"
-                    ? "text-green-400"
-                    : "text-yellow-400"
+                    ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                    : "bg-yellow-500/10 border border-yellow-500/20 text-yellow-400"
                 }`}
               >
                 {connectionStatus.message}
-              </p>
+              </div>
             )}
           </div>
 
@@ -608,14 +649,14 @@ export default function AuditPage() {
                 <button
                   key={link.id}
                   onClick={() => setActiveSection(link.id)}
-                  className={`flex items-center w-full space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center w-full space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                     activeSection === link.id
-                      ? "bg-blue-500 text-white"
-                      : "text-gray-300 hover:bg-gray-700/50"
+                      ? "bg-blue-500/80 text-white shadow-lg shadow-blue-500/20"
+                      : "text-gray-300 hover:bg-gray-700/50 hover:text-white"
                   }`}
                 >
                   <span className="text-xl">{link.icon}</span>
-                  <span>{link.label}</span>
+                  <span className="font-medium">{link.label}</span>
                 </button>
               ))}
             </div>
@@ -623,10 +664,10 @@ export default function AuditPage() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-8 overflow-y-auto">
           {!contract ? (
             <div className="max-w-2xl mx-auto text-center">
-              <div className="bg-gray-800/30 backdrop-blur-md rounded-xl p-8 border border-gray-700/50">
+              <div className="bg-gray-800/40 backdrop-blur-md rounded-xl p-8 border border-gray-700/50 shadow-xl">
                 <h2 className="text-2xl font-bold text-white mb-4">
                   Welcome to the Audit Dashboard
                 </h2>
@@ -647,26 +688,26 @@ export default function AuditPage() {
 
       {/* Loading Overlay */}
       {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center backdrop-blur-sm">
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-2 text-white">Loading...</p>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-800/90 p-8 rounded-xl border border-gray-700/50 shadow-2xl">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500/50 border-t-blue-500 mx-auto"></div>
+            <p className="mt-4 text-white font-medium">Loading...</p>
           </div>
         </div>
       )}
 
-      {/* Updated Error Display */}
+      {/* Error Display */}
       {error && (
         <div
-          className={`fixed bottom-4 right-4 max-w-md backdrop-blur-sm border px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
+          className={`fixed bottom-4 right-4 max-w-md backdrop-blur-md border px-6 py-4 rounded-xl shadow-xl transition-all duration-300 z-50 ${
             error.type === "error"
-              ? "bg-red-900/50 border-red-500 text-red-200"
+              ? "bg-red-900/50 border-red-500/30 text-red-200"
               : error.type === "warning"
-              ? "bg-yellow-900/50 border-yellow-500 text-yellow-200"
-              : "bg-green-900/50 border-green-500 text-green-200"
+              ? "bg-yellow-900/50 border-yellow-500/30 text-yellow-200"
+              : "bg-green-900/50 border-green-500/30 text-green-200"
           }`}
         >
-          <div className="flex items-start space-x-3">
+          <div className="flex items-start space-x-4">
             <div className="flex-shrink-0 pt-0.5">
               {error.type === "error" && (
                 <svg
@@ -708,13 +749,13 @@ export default function AuditPage() {
                 </svg>
               )}
             </div>
-            <div>
+            <div className="flex-1">
               <h3 className="text-sm font-medium mb-1">{error.title}</h3>
               <p className="text-sm opacity-90">{error.message}</p>
             </div>
             <button
               onClick={() => setError(null)}
-              className="flex-shrink-0 ml-auto -mr-2 mt-0.5 text-current opacity-50 hover:opacity-100 transition-opacity"
+              className="flex-shrink-0 ml-4 -mr-2 mt-0.5 text-current opacity-50 hover:opacity-100 transition-opacity"
             >
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path

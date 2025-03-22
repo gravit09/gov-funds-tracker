@@ -1,6 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import IPFSUpload from "@/components/IPFSUpload";
+import addresses from "@/config/addresses.json";
 
 export default function EntityDashboard() {
   // State declarations
@@ -15,7 +19,7 @@ export default function EntityDashboard() {
   const [ethersModule, setEthersModule] = useState(null);
 
   // Contract configuration
-  const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+  const contractAddress = addresses.contracts.main;
   const contractABI = [
     "function recordSpending(string memory purpose, uint256 amount, string memory documentHash) public",
     "function getEntityDetails(address entityAddress) public view returns (string memory name, bool isActive, uint256 balance)",
@@ -24,13 +28,14 @@ export default function EntityDashboard() {
     "function getEntityFundRequests(address entityAddress, uint256 offset, uint256 limit) public view returns (tuple(uint256 id, address entity, uint256 amount, string reason, string documentHash, uint256 timestamp, bool isApproved, bool isRejected)[] memory)",
   ];
 
-  // Entity private keys mapping
-  const entityPrivateKeys = {
-    "0x70997970C51812dc3A010C7d01b50e0d17dc79C8":
-      "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", // Department of Education
-    "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC":
-      "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", // Dept of Women Welfare
-  };
+  // Get entity accounts from addresses.json
+  const entityAccounts = Object.entries(addresses.accounts)
+    .filter(([_, account]) => account.name.includes("Department"))
+    .map(([address, account]) => ({
+      address,
+      name: account.name,
+      privateKey: account.privateKey,
+    }));
 
   // State for contract connection
   const [contract, setContract] = useState(null);
@@ -50,12 +55,14 @@ export default function EntityDashboard() {
       const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
 
       // Get the private key for the selected entity
-      const privateKey = entityPrivateKeys[selectedEntity];
-      if (!privateKey) {
-        throw new Error("Private key not found for selected entity");
+      const selectedAccount = entityAccounts.find(
+        (acc) => acc.address === selectedEntity
+      );
+      if (!selectedAccount) {
+        throw new Error("Selected entity not found");
       }
 
-      const newSigner = new ethers.Wallet(privateKey, provider);
+      const newSigner = new ethers.Wallet(selectedAccount.privateKey, provider);
       const newContract = new ethers.Contract(
         contractAddress,
         contractABI,
@@ -64,7 +71,7 @@ export default function EntityDashboard() {
 
       setSigner(newSigner);
       setContract(newContract);
-      setConnectionStatus(`Connected as ${selectedEntity}`);
+      setConnectionStatus(`Connected as ${selectedAccount.name}`);
     } catch (error) {
       console.error("Connection error:", error);
       setConnectionStatus(`Connection failed: ${error.message}`);
@@ -226,7 +233,20 @@ export default function EntityDashboard() {
     }
   };
 
-  const renderContent = () => {
+  // Navigation items
+  const tabs = [
+    { id: "connection", label: "Connect Wallet" },
+    { id: "overview", label: "Overview" },
+    { id: "funds", label: "Fund Management" },
+    { id: "ipfs", label: "IPFS Upload" },
+    { id: "spending", label: "Spending Records" },
+    { id: "micro", label: "Micro-Transactions" },
+    { id: "requests", label: "Fund Requests" },
+    { id: "ratings", label: "Entity Ratings" },
+  ];
+
+  // Render section content based on active section
+  const renderSectionContent = () => {
     switch (activeTab) {
       case "connection":
         return (
@@ -246,12 +266,11 @@ export default function EntityDashboard() {
                   className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
                 >
                   <option value="">Select an entity...</option>
-                  <option value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8">
-                    Department of Education
-                  </option>
-                  <option value="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC">
-                    Department of Women Welfare
-                  </option>
+                  {entityAccounts.map((account) => (
+                    <option key={account.address} value={account.address}>
+                      {account.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div
@@ -448,6 +467,45 @@ export default function EntityDashboard() {
             </div>
           </div>
         );
+      case "ipfs":
+        return (
+          <div className="bg-gray-800/30 backdrop-blur-md rounded-xl p-8 border border-gray-700/50 shadow-[0_0_15px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all duration-300">
+            <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
+              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+              IPFS Document Upload
+            </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <IPFSUpload />
+              <div className="bg-gray-800/30 backdrop-blur-md rounded-xl p-6 border border-gray-700/50">
+                <h3 className="text-xl font-semibold text-white mb-4">
+                  IPFS Upload Guide
+                </h3>
+                <div className="space-y-4 text-gray-300">
+                  <p>To upload documents to IPFS:</p>
+                  <ol className="list-decimal list-inside space-y-2">
+                    <li>Select the document you want to upload</li>
+                    <li>Click "Upload to IPFS"</li>
+                    <li>Once uploaded, you'll receive an IPFS hash and URI</li>
+                    <li>
+                      Use the IPFS hash in your fund requests or spending
+                      records
+                    </li>
+                  </ol>
+                  <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-400 mb-2">
+                      Supported File Types:
+                    </h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>PDF Documents (.pdf)</li>
+                      <li>Word Documents (.doc, .docx)</li>
+                      <li>Text Files (.txt)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -515,6 +573,16 @@ export default function EntityDashboard() {
                 Spending Management
               </button>
               <button
+                onClick={() => setActiveTab("ipfs")}
+                className={`w-full text-left px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
+                  activeTab === "ipfs"
+                    ? "bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                    : "text-gray-300 hover:bg-gray-700/50 hover:shadow-[0_0_10px_rgba(99,102,241,0.1)]"
+                }`}
+              >
+                IPFS Upload
+              </button>
+              <button
                 onClick={() => setActiveTab("funds")}
                 className={`w-full text-left px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
                   activeTab === "funds"
@@ -544,7 +612,7 @@ export default function EntityDashboard() {
                 {error}
               </div>
             )}
-            {renderContent()}
+            {renderSectionContent()}
           </div>
         </div>
       </div>
