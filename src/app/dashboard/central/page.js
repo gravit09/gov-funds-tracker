@@ -1,5 +1,5 @@
 // Contract configuration
-const contractAddress = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 const contractABI = [
   "function getEntityDetails(address entityAddress) public view returns (string memory name, bool isActive, uint256 balance)",
   "function getAllEntityAddresses() public view returns (address[] memory)",

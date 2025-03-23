@@ -19,7 +19,7 @@ export default function EntityDashboard() {
   const [ethersModule, setEthersModule] = useState(null);
 
   // Contract configuration
-  const contractAddress = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+  const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
   const contractABI = [
     "function recordSpending(string memory title, uint256 amount, string memory ipfsUri) public",
     "function getEntityDetails(address entityAddress) public view returns (string memory name, bool isActive, uint256 balance)",
@@ -821,27 +821,54 @@ export default function EntityDashboard() {
       if (!contract) {
         throw new Error("Please connect your account first");
       }
-      if (!selectedEntity) {
-        throw new Error("Please select an entity account first");
-      }
       if (!selectedTenderId) {
-        throw new Error("Please enter tender ID");
+        throw new Error("Please enter a tender ID");
       }
 
       setIsLoading(true);
       setError("");
-      setTenderResult("Processing tender award...");
+
+      // Get tender details first to validate
+      const tenderDetails = await contract.getTenderDetails(selectedTenderId);
+      
+      // Check if tender exists and is active
+      if (!tenderDetails.isActive) {
+        throw new Error("This tender is not active or has already been awarded");
+      }
+
+      // Check if the current user is the issuer
+      if (tenderDetails.issuer.toLowerCase() !== selectedEntity.toLowerCase()) {
+        throw new Error("Only the tender issuer can award the tender");
+      }
+
+      // Check if there are any bids
+      if (tenderDetails.bidCount === 0) {
+        throw new Error("Cannot award tender with no bids");
+      }
 
       // Award the tender
       const tx = await contract.awardTender(selectedTenderId);
       await tx.wait();
 
-      // Clear form and show success message
-      setSelectedTenderId("");
-      setTenderResult("Tender awarded successfully!");
+      setTenderResult(`
+        <div class="text-green-400">
+          Tender awarded successfully!<br>
+          Transaction hash: ${tx.hash}<br>
+          <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-400 hover:underline">
+            View on Etherscan
+          </a>
+        </div>
+      `);
+
+      // Refresh tender list
+      await getTenders();
     } catch (error) {
-      console.error("Tender award error:", error);
-      setTenderResult("Error: " + error.message);
+      console.error("Award tender error:", error);
+      setTenderResult(`
+        <div class="text-red-400">
+          Error awarding tender: ${error.message}
+        </div>
+      `);
     } finally {
       setIsLoading(false);
     }
@@ -1291,73 +1318,7 @@ export default function EntityDashboard() {
               </div>
             </div>
 
-            {/* Place Bid Form */}
-            <div className="mb-8">
-              <h3 className="text-lg font-medium text-white mb-4">Place Bid</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <input
-                    type="number"
-                    value={selectedTenderId}
-                    onChange={(e) => setSelectedTenderId(e.target.value)}
-                    placeholder="Tender ID"
-                    className="bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <input
-                    type="number"
-                    value={bidAmount}
-                    onChange={(e) => setBidAmount(e.target.value)}
-                    placeholder="Bid Amount (ETH)"
-                    className="bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <button
-                  onClick={placeBid}
-                  disabled={isLoading}
-                  className="w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20"
-                >
-                  Place Bid
-                </button>
-                {bidResult && (
-                  <div className="mt-2 p-2 bg-gray-700/50 rounded text-gray-300">
-                    {bidResult}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Withdraw Bid Form */}
-            <div className="mb-8">
-              <h3 className="text-lg font-medium text-white mb-4">
-                Withdraw Bid
-              </h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <input
-                    type="number"
-                    value={selectedTenderId}
-                    onChange={(e) => setSelectedTenderId(e.target.value)}
-                    placeholder="Tender ID"
-                    className="bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <input
-                    type="number"
-                    value={selectedBidId}
-                    onChange={(e) => setSelectedBidId(e.target.value)}
-                    placeholder="Bid ID"
-                    className="bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <button
-                  onClick={withdrawBid}
-                  disabled={isLoading}
-                  className="w-full bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 disabled:opacity-50 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20"
-                >
-                  Withdraw Bid
-                </button>
-              </div>
-            </div>
-
+            
             {/* View Bids */}
             <div className="mb-8">
               <h3 className="text-lg font-medium text-white mb-4">View Bids</h3>

@@ -259,11 +259,41 @@ export default function Home() {
               </li>
               <li className="flex items-center group-hover:text-gray-300 transition-colors">
                 <span className="text-green-500 mr-2">✓</span>
-                Monitor entity performance
+                Monitor performance
               </li>
               <li className="flex items-center group-hover:text-gray-300 transition-colors">
                 <span className="text-green-500 mr-2">✓</span>
-                Access public reports
+                Access audit reports
+              </li>
+            </ul>
+          </Link>
+
+          {/* Tender Management Card */}
+          <Link 
+            href="/dashboard/tender"
+            className="block bg-gray-800/50 backdrop-blur-sm rounded-lg p-8 transform transition-all hover:-translate-y-2 hover:shadow-lg hover:shadow-green-500/20 border border-gray-700 group"
+          >
+            <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">📋</div>
+            <h3 className="text-2xl font-semibold mb-4 text-white group-hover:text-green-400 transition-colors">Tender Bidding</h3>
+            <p className="text-gray-300 mb-6">
+              Issue new tenders, place bids, and manage tender processes efficiently.
+            </p>
+            <ul className="space-y-2 text-gray-400">
+              <li className="flex items-center group-hover:text-gray-300 transition-colors">
+                <span className="text-green-500 mr-2">✓</span>
+                Issue new tenders
+              </li>
+              <li className="flex items-center group-hover:text-gray-300 transition-colors">
+                <span className="text-green-500 mr-2">✓</span>
+                Place competitive bids
+              </li>
+              <li className="flex items-center group-hover:text-gray-300 transition-colors">
+                <span className="text-green-500 mr-2">✓</span>
+                Track tender status
+              </li>
+              <li className="flex items-center group-hover:text-gray-300 transition-colors">
+                <span className="text-green-500 mr-2">✓</span>
+                Award and manage tenders
               </li>
             </ul>
           </Link>

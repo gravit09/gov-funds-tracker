@@ -45,7 +45,7 @@ export default function CentralGovernmentDashboard() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Contract configuration
-  const contractAddress = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+  const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
   const contractABI = [
     "function registerEntity(address entityAddress, string memory name) public",
     "function deactivateEntity(address entityAddress) public",

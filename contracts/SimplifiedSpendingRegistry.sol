@@ -644,12 +644,13 @@ contract SimplifiedSpendingRegistry {
         emit TenderIssued(tenderCount, msg.sender, title, amount, deadline);
     }
 
-    function placeBid(uint256 tenderId, uint256 amount) public onlyRegisteredEntity {
+    function placeBid(uint256 tenderId, uint256 amount) public payable {
         require(tenders[tenderId].isActive, "Tender is not active");
         require(block.timestamp < tenders[tenderId].deadline, "Tender deadline has passed");
         require(msg.sender != tenders[tenderId].issuer, "Issuer cannot place bid");
         require(amount >= tenders[tenderId].minBidAmount, "Bid amount below minimum");
         require(amount <= tenders[tenderId].maxBidAmount, "Bid amount above maximum");
+        require(msg.value == amount, "Incorrect ETH amount sent");
 
         uint256 bidId = tenderBidCount[tenderId]++;
         bids[tenderId][bidId] = Bid({
@@ -729,7 +730,11 @@ contract SimplifiedSpendingRegistry {
     }
 
     function getTenders(uint256 offset, uint256 limit) public view returns (Tender[] memory) {
-        require(offset < tenderCount, "Offset exceeds tender count");
+        // If offset is greater than or equal to tender count, return empty array
+        if (offset >= tenderCount) {
+            return new Tender[](0);
+        }
+        
         require(limit > 0, "Limit must be greater than zero");
         
         uint256 resultCount = limit;

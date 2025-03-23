@@ -17,7 +17,7 @@ export default function Dashboard() {
         if (typeof window.ethereum !== "undefined") {
           const provider = new ethers.BrowserProvider(window.ethereum);
           const signer = await provider.getSigner();
-          const contractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512"; // Your deployed contract address
+          const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Your deployed contract address
           const contract = new ethers.Contract(
             contractAddress,
             SimplifiedSpendingRegistry.abi,
