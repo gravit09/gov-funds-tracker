@@ -453,7 +453,7 @@ export default function TenderDashboard() {
               </span>
             </div>
             <Link
-              href="/dashboard"
+              href="/"
               className="text-blue-400 hover:text-blue-300 text-sm"
             >
               Back to Dashboard

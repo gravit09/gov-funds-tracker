@@ -67,6 +67,7 @@ export default function EntityDashboard() {
   const [minBidAmount, setMinBidAmount] = useState("");
   const [maxBidAmount, setMaxBidAmount] = useState("");
   const [selectedTenderId, setSelectedTenderId] = useState("");
+  const [selectedTenderId2, setSelectedTenderId2] = useState("");
   const [bidAmount, setBidAmount] = useState("");
   const [tenderResult, setTenderResult] = useState("");
   const [bidResult, setBidResult] = useState("");
@@ -851,13 +852,8 @@ export default function EntityDashboard() {
       await tx.wait();
 
       setTenderResult(`
-        <div class="text-green-400">
-          Tender awarded successfully!<br>
-          Transaction hash: ${tx.hash}<br>
-          <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" class="text-blue-400 hover:underline">
-            View on Etherscan
-          </a>
-        </div>
+          Tender awarded successfully!
+          Transaction hash: ${tx.hash}
       `);
 
       // Refresh tender list
@@ -865,9 +861,7 @@ export default function EntityDashboard() {
     } catch (error) {
       console.error("Award tender error:", error);
       setTenderResult(`
-        <div class="text-red-400">
           Error awarding tender: ${error.message}
-        </div>
       `);
     } finally {
       setIsLoading(false);
@@ -1030,14 +1024,11 @@ export default function EntityDashboard() {
                 </form>
               </div>
 
-              {/* Micro-transaction Management */}
-              <div className="bg-gray-800/30 backdrop-blur-md rounded-xl p-6 border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300">
-                <h2 className="text-lg font-semibold mb-4 text-blue-400">
-                  Micro-transaction Management
-                </h2>
+            
+    
 
                 {/* Record Micro-transaction */}
-                <div className="space-y-4 mb-6">
+                {/* <div className="space-y-4 mb-6">
                   <h3 className="text-md font-medium text-gray-300">
                     Record Micro-transaction
                   </h3>
@@ -1082,10 +1073,10 @@ export default function EntityDashboard() {
                       {microTransactionResult}
                     </div>
                   )}
-                </div>
+                </div> */}
 
                 {/* View Micro-transactions */}
-                <div className="space-y-4">
+                {/* <div className="space-y-4">
                   <h3 className="text-md font-medium text-gray-300">
                     View Micro-transactions
                   </h3>
@@ -1110,10 +1101,9 @@ export default function EntityDashboard() {
                       {microTransactionsList}
                     </pre>
                   )}
-                </div>
+                </div> */}
               </div>
             </div>
-          </div>
         );
       case "funds":
         return (
@@ -1293,11 +1283,7 @@ export default function EntityDashboard() {
                 >
                   Issue Tender
                 </button>
-                {tenderResult && (
-                  <div className="mt-2 p-2 bg-gray-700/50 rounded text-gray-300">
-                    {tenderResult}
-                  </div>
-                )}
+     
               </div>
             </div>
 
@@ -1351,8 +1337,8 @@ export default function EntityDashboard() {
               <div className="space-y-4">
                 <input
                   type="number"
-                  value={selectedTenderId}
-                  onChange={(e) => setSelectedTenderId(e.target.value)}
+                  value={selectedTenderId2}
+                  onChange={(e) => setSelectedTenderId2(e.target.value)}
                   placeholder="Tender ID"
                   className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -1371,7 +1357,11 @@ export default function EntityDashboard() {
                   >
                     Cancel Tender
                   </button>
+                  
                 </div>
+                <div className="mt-2 p-2 bg-gray-700/50 rounded text-gray-300">
+                    {tenderResult}
+                  </div>
               </div>
             </div>
           </div>

@@ -353,7 +353,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="container mx-auto px-4 py-8 text-center text-gray-400">
         <p>Built with Next.js and Ethereum</p>
-        <p className="mt-2">© 2024 Government Spending Registry. All rights reserved.</p>
+        <p className="mt-2">© 2025 Government Spending Registry. All rights reserved.</p>
       </footer>
     </div>
   );
