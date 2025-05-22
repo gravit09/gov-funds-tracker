@@ -1,4 +1,4 @@
-An Blockchain based govt spending tracker & tender management platform.
+## An Blockchain based govt spending tracker & tender management platform.
 ## Getting Started
 
 First, run the development server:
