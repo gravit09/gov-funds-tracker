@@ -7,10 +7,10 @@ export default function IPFSUpload() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Pre-filled Pinata credentials
-  const PINATA_API_KEY = "44fa63f8bf1b21dded43";
+ //this component should be a server just did it on frontend due to time constraint.
+  const PINATA_API_KEY = "key";
   const PINATA_SECRET_KEY =
-    "d6228813e4d0ce8be5f0419150a6c050241e444f2afd378614bb72ffdd18fdf2";
+    "key";
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
